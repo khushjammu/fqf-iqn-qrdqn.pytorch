@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+import torch_xla
+import torch_xla.core.xla_model as xm
+
 from fqf_iqn_qrdqn.memory import LazyMultiStepMemory, \
     LazyPrioritizedMultiStepMemory
 from fqf_iqn_qrdqn.utils import RunningMeanStats, LinearAnneaer
@@ -30,8 +33,9 @@ class BaseAgent(ABC):
         # torch.backends.cudnn.deterministic = True  # It harms a performance.
         # torch.backends.cudnn.benchmark = False  # It harms a performance.
 
-        self.device = torch.device(
-            "cuda" if cuda and torch.cuda.is_available() else "cpu")
+        self.device = xm.xla_device()
+        # self.device = torch.device(
+        #     "cuda" if cuda and torch.cuda.is_available() else "cpu")
 
         self.online_net = None
         self.target_net = None
@@ -182,8 +186,9 @@ class BaseAgent(ABC):
         if self.episodes % self.log_interval == 0:
             self.writer.add_scalar(
                 'return/train', self.train_return.get(), 4 * self.steps)
-
-        print(f'Episode: {self.episodes:<4}  '
+        
+        # print
+        xm.master_print(f'Episode: {self.episodes:<4}  '
               f'episode steps: {episode_steps:<4}  '
               f'return: {episode_return:<5.1f}')
 
@@ -239,10 +244,10 @@ class BaseAgent(ABC):
         # We log evaluation results along with training frames = 4 * steps.
         self.writer.add_scalar(
             'return/test', mean_return, 4 * self.steps)
-        print('-' * 60)
-        print(f'Num steps: {self.steps:<5}  '
+        xm.master_print('-' * 60)
+        xm.master_print(f'Num steps: {self.steps:<5}  '
               f'return: {mean_return:<5.1f}')
-        print('-' * 60)
+        xm.master_print('-' * 60)
 
     def __del__(self):
         self.env.close()

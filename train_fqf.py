@@ -6,8 +6,10 @@ from datetime import datetime
 from fqf_iqn_qrdqn.env import make_pytorch_env
 from fqf_iqn_qrdqn.agent import FQFAgent
 
+import torch_xla.distributed.xla_multiprocessing as xmp
 
-def run(args):
+
+def run(index, args):
     with open(args.config) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
 
@@ -26,7 +28,14 @@ def run(args):
     agent = FQFAgent(
         env=env, test_env=test_env, log_dir=log_dir, seed=args.seed,
         cuda=args.cuda, **config)
+    print(f"core {index} agent created, running now")
     agent.run()
+
+def wrapper(args):
+    def map_fn(index):
+        run(index, args)
+    
+    xmp.spawn(map_fn, args=(), nprocs=8, start_method='fork')
 
 
 if __name__ == '__main__':
@@ -37,4 +46,5 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     args = parser.parse_args()
-    run(args)
+    wrapper(args)
+    # run(args)

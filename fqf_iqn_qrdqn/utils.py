@@ -2,16 +2,22 @@ from collections import deque
 import numpy as np
 import torch
 
+import torch_xla
+import torch_xla.core.xla_model as xm
+
 
 def update_params(optim, loss, networks, retain_graph=False,
                   grad_cliping=None):
+    # print
+    # xm.master_print("updating params!")
     optim.zero_grad()
     loss.backward(retain_graph=retain_graph)
     # Clip norms of gradients to stebilize training.
     if grad_cliping:
         for net in networks:
             torch.nn.utils.clip_grad_norm_(net.parameters(), grad_cliping)
-    optim.step()
+    xm.optimizer_step(optim, barrier=True)
+    # optim.step()
 
 
 def disable_gradients(network):
