@@ -35,7 +35,7 @@ def wrapper(args):
     def map_fn(index):
         run(index, args)
     
-    xmp.spawn(map_fn, args=(), nprocs=8, start_method='fork')
+    xmp.spawn(map_fn, args=(), nprocs=1, start_method='fork')
 
 
 if __name__ == '__main__':
