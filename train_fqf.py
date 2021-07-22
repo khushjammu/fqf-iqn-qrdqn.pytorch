@@ -10,25 +10,25 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 import reverb
 
-def run(index, args):
-    with open(args.config) as f:
+def run(index, flags):
+    with open(flags["config"]) as f:
         config = yaml.load(f, Loader=yaml.SafeLoader)
 
     # Create environments.
-    env = make_pytorch_env(args.env_id)
+    env = make_pytorch_env(flags["env_id"])
     test_env = make_pytorch_env(
-        args.env_id, episode_life=False, clip_rewards=False)
+        flags["env_id"], episode_life=False, clip_rewards=False)
 
     # Specify the directory to log.
-    name = args.config.split('/')[-1].rstrip('.yaml')
+    name = flags["config"].split('/')[-1].rstrip('.yaml')
     time = datetime.now().strftime("%Y%m%d-%H%M")
     log_dir = os.path.join(
-        'logs', args.env_id, f'{name}-seed{args.seed}-{time}')
+        'logs', flags["env_id"], f'{name}-seed{flags["seed"]}-{time}')
 
     # Create the agent and run.
     agent = FQFAgent(
-        env=env, test_env=test_env, log_dir=log_dir, seed=args.seed,
-        cuda=args.cuda, **config)
+        env=env, test_env=test_env, log_dir=log_dir, seed=flags["seed"],
+        cuda=flags["cuda"], **config)
     print(f"core {index} agent created, running now")
     agent.run()
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--nprocs', type=int, default=1)
     args = parser.parse_args()
-    wrapper(args)
+    # wrapper(args)
     # run(args)
 
     replay_table = reverb.Table(
@@ -79,4 +79,6 @@ if __name__ == '__main__':
     reverb_server = reverb.Server([replay_table], port=8000)
     print(reverb.Client('localhost:8000').server_info())
 
-    xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='spawn') # fork
+    flags = vars(args)
+
+    xmp.spawn(map_fn, args=(flags), nprocs=args.nprocs, start_method='spawn') # fork
