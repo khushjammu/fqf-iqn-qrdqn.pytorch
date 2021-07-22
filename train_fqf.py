@@ -59,6 +59,7 @@ def wrapper(args):
     )
 
     reverb_server = reverb.Server([replay_table], port=8000)
+    print(reverb.Client('localhost:8000').server_info())
     
     xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
 
