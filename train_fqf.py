@@ -83,4 +83,5 @@ if __name__ == '__main__':
 
     flags = vars(args)
 
-    xmp.spawn(map_fn, args=(flags), nprocs=args.nprocs, start_method='spawn') # fork
+    # keep the comma after flags, otherwise it tries to expand the dict
+    xmp.spawn(map_fn, args=(flags,), nprocs=args.nprocs, start_method='spawn') # fork
