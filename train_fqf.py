@@ -52,8 +52,10 @@ def run(index, flags):
     
 #     xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
 
-def map_fn(index, args):
-    run(index, args)
+def map_fn(index, flags, *args):
+    print("flags:", flags)
+    print("extra args:", args)
+    run(index, flags)
 
 
 if __name__ == '__main__':
