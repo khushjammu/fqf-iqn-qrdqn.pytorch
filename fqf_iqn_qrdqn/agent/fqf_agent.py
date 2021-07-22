@@ -95,9 +95,9 @@ class FQFAgent(BaseAgent):
         states = torch.ByteTensor(states).to(self.device).float() / 255.
         next_states = torch.ByteTensor(
             next_states).to(self.device).float() / 255.
-        actions = torch.LongTensor(self['action'][indices]).to(self.device)
-        rewards = torch.FloatTensor(self['reward'][indices]).to(self.device)
-        dones = torch.FloatTensor(self['done'][indices]).to(self.device)
+        actions = torch.LongTensor(actions).to(self.device)
+        rewards = torch.FloatTensor(rewards).to(self.device)
+        dones = torch.FloatTensor(dones).to(self.device)
 
         # states, actions, rewards, next_states, dones = next(self._iter)
 
