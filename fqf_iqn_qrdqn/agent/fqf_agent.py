@@ -81,7 +81,7 @@ class FQFAgent(BaseAgent):
 
 
         # fetch sample from  reverb
-        samples = list(self.memory.sample('my_table', num_samples=32))
+        samples = list(self.memory.sample('replay_table', num_samples=self.batch_size))
 
         # stack individual samples into batch
         states = np.stack([sample[0].data[0] for sample in samples], axis=0)
