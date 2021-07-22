@@ -59,7 +59,12 @@ class BaseAgent(ABC):
         if not os.path.exists(self.summary_dir):
             os.makedirs(self.summary_dir)
 
-        self.writer = SummaryWriter(log_dir=self.summary_dir)
+
+        if xm.is_master_ordinal():
+            self.writer = SummaryWriter(log_dir=self.summary_dir)
+        else:
+            self.writer = None
+
         self.train_return = RunningMeanStats(log_interval)
 
         self.steps = 0
@@ -183,7 +188,7 @@ class BaseAgent(ABC):
         self.train_return.append(episode_return)
 
         # We log evaluation results along with training frames = 4 * steps.
-        if self.episodes % self.log_interval == 0:
+        if self.episodes % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
                 'return/train', self.train_return.get(), 4 * self.steps)
         
@@ -242,8 +247,9 @@ class BaseAgent(ABC):
             self.save_models(os.path.join(self.model_dir, 'best'))
 
         # We log evaluation results along with training frames = 4 * steps.
-        self.writer.add_scalar(
-            'return/test', mean_return, 4 * self.steps)
+        if self.writer:
+            self.writer.add_scalar(
+                'return/test', mean_return, 4 * self.steps)
         xm.master_print('-' * 60)
         xm.master_print(f'Num steps: {self.steps:<5}  '
               f'return: {mean_return:<5.1f}')
@@ -252,4 +258,6 @@ class BaseAgent(ABC):
     def __del__(self):
         self.env.close()
         self.test_env.close()
-        self.writer.close()
+
+        if self.writer:
+            self.writer.close()

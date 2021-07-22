@@ -35,7 +35,7 @@ def wrapper(args):
     def map_fn(index):
         run(index, args)
     
-    xmp.spawn(map_fn, args=(), nprocs=1, start_method='fork')
+    xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
 
 
 if __name__ == '__main__':
@@ -45,6 +45,7 @@ if __name__ == '__main__':
     parser.add_argument('--env_id', type=str, default='PongNoFrameskip-v4')
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--nprocs', type=int, default=1)
     args = parser.parse_args()
     wrapper(args)
     # run(args)

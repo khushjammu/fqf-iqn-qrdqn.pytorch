@@ -131,7 +131,8 @@ class FQFAgent(BaseAgent):
         if self.use_per:
             self.memory.update_priority(errors)
 
-        if self.learning_steps % self.log_interval == 0:
+        # self.writer should be None for non-master-ordinal cores
+        if self.learning_steps % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
                 'loss/fraction_loss', fraction_loss.detach().item(),
                 4*self.steps)
