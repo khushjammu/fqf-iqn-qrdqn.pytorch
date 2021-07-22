@@ -7,6 +7,9 @@ from torch.utils.tensorboard import SummaryWriter
 import torch_xla
 import torch_xla.core.xla_model as xm
 
+import reverb
+from acme import datasets
+
 # from fqf_iqn_qrdqn.memory import LazyMultiStepMemory, \
 #     LazyPrioritizedMultiStepMemory
 from fqf_iqn_qrdqn.utils import RunningMeanStats, LinearAnneaer

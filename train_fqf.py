@@ -38,7 +38,7 @@ def wrapper(args):
 
 
     # start reverb server first here? then each client access it
-    reverb_table = reverb.Table(
+    replay_table = reverb.Table(
          name='my_uniform_experience_replay_buffer',
          sampler=reverb.selectors.Uniform(),
          remover=reverb.selectors.Fifo(),
