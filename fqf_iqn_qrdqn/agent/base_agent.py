@@ -8,7 +8,6 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 
 import reverb
-from acme import datasets
 
 # from fqf_iqn_qrdqn.memory import LazyMultiStepMemory, \
 #     LazyPrioritizedMultiStepMemory
@@ -49,11 +48,18 @@ class BaseAgent(ABC):
         # reverb client to sample from the reverb server
         self.memory = reverb.Client('localhost:8000')
 
-        self.dataset = datasets.make_reverb_dataset(
-            server_address='localhost:8000',
-            batch_size=batch_size) # no prefetch
 
-        self._iter = iter(self.dataset)
+        # self.dataset = reverb.TrajectoryDataset.from_table_signature(
+        #   server_address='localhost:8000',
+        #   table='replay_table',
+        #   max_in_flight_samples_per_worker=10,
+        #   rate_limiter_timeout_ms=10)
+
+        # self.dataset = datasets.make_reverb_dataset(
+        #     server_address='localhost:8000',
+        #     batch_size=batch_size) # no prefetch
+
+        # self._iter = iter(self.dataset)
 
         # TODO: implement prioritised replay
         # if use_per:
@@ -176,6 +182,16 @@ class BaseAgent(ABC):
         done = False
         state = self.env.reset()
 
+        def _insert_to_reverb(state, action, reward, next_state, done):
+            state_mod = np.empty(self.env.observation_space.shape, dtype=np.uint8)
+            state_mod[...] = state
+
+            next_state_mod = np.empty(self.env.observation_space.shape, dtype=np.uint8)
+            next_state_mod[...] = next_state
+
+            self.memory.insert([state_mod, action, reward, next_state_mod, done])
+            # self.memory.insert([state, action, reward, next_state, done])
+
         while (not done) and episode_steps <= self.max_episode_steps:
             # NOTE: Noises can be sampled only after self.learn(). However, I
             # sample noises before every action, which seems to lead better
@@ -192,8 +208,10 @@ class BaseAgent(ABC):
             # To calculate efficiently, I just set priority=max_priority here.
             # self.memory.append(state, action, reward, next_state, done)
             # client.insert([0, 1], priorities={'my_table': 1.0})
-            self.memory.insert([state, action, reward, next_state, done])
 
+            # torch.Size([32, 4, 84, 84]) torch.Size([32, 1]) torch.Size([32, 1]) torch.Size([32, 4, 84, 84]) torch.Size([32, 1])
+
+            _insert_to_reverb(state, action, reward, next_state, done)
 
             self.steps += 1
             episode_steps += 1

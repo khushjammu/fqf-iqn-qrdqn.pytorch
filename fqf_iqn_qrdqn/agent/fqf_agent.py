@@ -80,7 +80,25 @@ class FQFAgent(BaseAgent):
         self.target_net.sample_noise()
 
 
-        states, actions, rewards, next_states, dones = next(self._iter)
+        # fetch sample from  reverb
+        samples = list(self.memory.sample('my_table', num_samples=32))
+
+        # stack individual samples into batch
+        states = np.stack([sample[0].data[0] for sample in samples], axis=0)
+        actions = np.stack([sample[0].data[1] for sample in samples], axis=0)
+        rewards = np.stack([sample[0].data[2] for sample in samples], axis=0)
+        next_states = np.stack([sample[0].data[3] for sample in samples], axis=0)
+        dones = np.stack([sample[0].data[4] for sample in samples], axis=0)
+
+        # convert everything for torch
+        states = torch.ByteTensor(states).to(self.device).float() / 255.
+        next_states = torch.ByteTensor(
+            next_states).to(self.device).float() / 255.
+        actions = torch.LongTensor(self['action'][indices]).to(self.device)
+        rewards = torch.FloatTensor(self['reward'][indices]).to(self.device)
+        dones = torch.FloatTensor(self['done'][indices]).to(self.device)
+
+        # states, actions, rewards, next_states, dones = next(self._iter)
 
         # TODO: implement prioritised replay
         # if self.use_per:
