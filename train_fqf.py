@@ -32,25 +32,28 @@ def run(index, args):
     print(f"core {index} agent created, running now")
     agent.run()
 
-def wrapper(args):
-    def map_fn(index):
-        run(index, args)
+# def wrapper(args):
+#     def map_fn(index):
+#         run(index, args)
 
 
-    # start reverb server first here? then each client access it
-    # TODO: populate signature dynamically
-    replay_table = reverb.Table(
-         name='replay_table',
-         sampler=reverb.selectors.Uniform(),
-         remover=reverb.selectors.Fifo(),
-         max_size=10**6,
-         rate_limiter=reverb.rate_limiters.MinSize(1),
-    )
+#     # start reverb server first here? then each client access it
+#     # TODO: populate signature dynamically
+    # replay_table = reverb.Table(
+    #      name='replay_table',
+    #      sampler=reverb.selectors.Uniform(),
+    #      remover=reverb.selectors.Fifo(),
+    #      max_size=10**6,
+    #      rate_limiter=reverb.rate_limiters.MinSize(1),
+    # )
 
-    reverb_server = reverb.Server([replay_table], port=8000)
-    print(reverb.Client('localhost:8000').server_info())
+    # reverb_server = reverb.Server([replay_table], port=8000)
+    # print(reverb.Client('localhost:8000').server_info())
     
-    xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
+#     xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
+
+def map_fn(index, args):
+    run(index, args)
 
 
 if __name__ == '__main__':
@@ -64,3 +67,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
     wrapper(args)
     # run(args)
+
+    replay_table = reverb.Table(
+         name='replay_table',
+         sampler=reverb.selectors.Uniform(),
+         remover=reverb.selectors.Fifo(),
+         max_size=10**6,
+         rate_limiter=reverb.rate_limiters.MinSize(1),
+    )
+
+    reverb_server = reverb.Server([replay_table], port=8000)
+    print(reverb.Client('localhost:8000').server_info())
+
+    xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='spawn') # fork
