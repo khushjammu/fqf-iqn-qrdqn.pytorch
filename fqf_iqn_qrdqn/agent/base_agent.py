@@ -95,9 +95,13 @@ class BaseAgent(ABC):
 
     def run(self):
         while True:
-            self.train_episode()
-            if self.steps > self.num_steps:
-                break
+            try:
+                self.train_episode()
+                if self.steps > self.num_steps:
+                    break
+            except KeyboardInterrupt:
+                xm.master_print("Received keyboard interrupt. Checkpointing and terminating")
+                self.save_models(os.path.join(self.model_dir, str(self.steps) + '-interrupt'))
 
     def is_update(self):
         return self.steps % self.update_interval == 0\
@@ -208,7 +212,7 @@ class BaseAgent(ABC):
 
         if self.steps % self.eval_interval == 0:
             self.evaluate()
-            self.save_models(os.path.join(self.model_dir, 'final'))
+            self.save_models(os.path.join(self.model_dir, str(self.steps) + '-final'))
             self.online_net.train()
 
     def evaluate(self):
