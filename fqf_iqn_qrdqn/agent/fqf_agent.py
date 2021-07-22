@@ -1,5 +1,6 @@
 import torch
 from torch.optim import Adam, RMSprop
+import numpy as np
 
 from fqf_iqn_qrdqn.model import FQF
 from fqf_iqn_qrdqn.utils import calculate_quantile_huber_loss, disable_gradients, evaluate_quantile_at_action, update_params
