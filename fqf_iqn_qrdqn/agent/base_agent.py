@@ -189,7 +189,7 @@ class BaseAgent(ABC):
             next_state_mod = np.empty(self.env.observation_space.shape, dtype=np.uint8)
             next_state_mod[...] = next_state
 
-            self.memory.insert([state_mod, action, reward, next_state_mod, done])
+            self.memory.insert([state_mod, action, reward, next_state_mod, done], priorities={"replay_table": 1.0})
             # self.memory.insert([state, action, reward, next_state, done])
 
         while (not done) and episode_steps <= self.max_episode_steps:
