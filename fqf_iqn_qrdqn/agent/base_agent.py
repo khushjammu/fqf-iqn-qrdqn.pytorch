@@ -7,8 +7,8 @@ from torch.utils.tensorboard import SummaryWriter
 import torch_xla
 import torch_xla.core.xla_model as xm
 
-from fqf_iqn_qrdqn.memory import LazyMultiStepMemory, \
-    LazyPrioritizedMultiStepMemory
+# from fqf_iqn_qrdqn.memory import LazyMultiStepMemory, \
+#     LazyPrioritizedMultiStepMemory
 from fqf_iqn_qrdqn.utils import RunningMeanStats, LinearAnneaer
 
 
@@ -41,15 +41,27 @@ class BaseAgent(ABC):
         self.target_net = None
 
         # Replay memory which is memory-efficient to store stacked frames.
-        if use_per:
-            beta_steps = (num_steps - start_steps) / update_interval
-            self.memory = LazyPrioritizedMultiStepMemory(
-                memory_size, self.env.observation_space.shape,
-                self.device, gamma, multi_step, beta_steps=beta_steps)
-        else:
-            self.memory = LazyMultiStepMemory(
-                memory_size, self.env.observation_space.shape,
-                self.device, gamma, multi_step)
+        print("use_per ignored, need to implement prioritised replay")
+
+        # reverb client to sample from the reverb server
+        self.memory = reverb.Client('localhost:8000')
+
+        self.dataset = datasets.make_reverb_dataset(
+            server_address='localhost:8000',
+            batch_size=batch_size) # no prefetch
+
+        self._iter = iter(self.dataset)
+
+        # TODO: implement prioritised replay
+        # if use_per:
+        #     beta_steps = (num_steps - start_steps) / update_interval
+        #     self.memory = LazyPrioritizedMultiStepMemory(
+        #         memory_size, self.env.observation_space.shape,
+        #         self.device, gamma, multi_step, beta_steps=beta_steps)
+        # else:
+        #     self.memory = LazyMultiStepMemory(
+        #         memory_size, self.env.observation_space.shape,
+        #         self.device, gamma, multi_step)
 
         self.log_dir = log_dir
         self.model_dir = os.path.join(log_dir, 'model')
@@ -95,13 +107,9 @@ class BaseAgent(ABC):
 
     def run(self):
         while True:
-            try:
-                self.train_episode()
-                if self.steps > self.num_steps:
-                    break
-            except KeyboardInterrupt:
-                xm.master_print("Received keyboard interrupt. Checkpointing and terminating")
-                self.save_models(os.path.join(self.model_dir, str(self.steps) + '-interrupt'))
+            self.train_episode()
+            if self.steps > self.num_steps:
+                break
 
     def is_update(self):
         return self.steps % self.update_interval == 0\
@@ -179,7 +187,10 @@ class BaseAgent(ABC):
             next_state, reward, done, _ = self.env.step(action)
 
             # To calculate efficiently, I just set priority=max_priority here.
-            self.memory.append(state, action, reward, next_state, done)
+            # self.memory.append(state, action, reward, next_state, done)
+            # client.insert([0, 1], priorities={'my_table': 1.0})
+            self.memory.insert([state, action, reward, next_state, done])
+
 
             self.steps += 1
             episode_steps += 1
@@ -212,7 +223,7 @@ class BaseAgent(ABC):
 
         if self.steps % self.eval_interval == 0:
             self.evaluate()
-            self.save_models(os.path.join(self.model_dir, str(self.steps) + '-final'))
+            self.save_models(os.path.join(self.model_dir, 'final'))
             self.online_net.train()
 
     def evaluate(self):

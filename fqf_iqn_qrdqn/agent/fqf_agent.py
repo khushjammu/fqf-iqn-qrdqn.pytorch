@@ -79,13 +79,17 @@ class FQFAgent(BaseAgent):
         self.online_net.sample_noise()
         self.target_net.sample_noise()
 
-        if self.use_per:
-            (states, actions, rewards, next_states, dones), weights =\
-                self.memory.sample(self.batch_size)
-        else:
-            states, actions, rewards, next_states, dones =\
-                self.memory.sample(self.batch_size)
-            weights = None
+
+        states, actions, rewards, next_states, dones = next(self._iter)
+
+        # TODO: implement prioritised replay
+        # if self.use_per:
+        #     (states, actions, rewards, next_states, dones), weights =\
+        #         self.memory.sample(self.batch_size)
+        # else:
+        #     states, actions, rewards, next_states, dones =\
+        #         self.memory.sample(self.batch_size)
+        #     weights = None
 
         # Calculate embeddings of current states.
         state_embeddings = self.online_net.calculate_state_embeddings(states)
@@ -128,8 +132,9 @@ class FQFAgent(BaseAgent):
                 self.online_net.quantile_net],
             retain_graph=False, grad_cliping=self.grad_cliping)
 
-        if self.use_per:
-            self.memory.update_priority(errors)
+        # TODO: implement prioritised replay
+        # if self.use_per:
+            # self.memory.update_priority(errors)
 
         # self.writer should be None for non-master-ordinal cores
         if self.learning_steps % self.log_interval == 0 and self.writer:

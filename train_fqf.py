@@ -8,6 +8,7 @@ from fqf_iqn_qrdqn.agent import FQFAgent
 
 import torch_xla.distributed.xla_multiprocessing as xmp
 
+import reverb
 
 def run(index, args):
     with open(args.config) as f:
@@ -34,6 +35,18 @@ def run(index, args):
 def wrapper(args):
     def map_fn(index):
         run(index, args)
+
+
+    # start reverb server first here? then each client access it
+    reverb_table = reverb.Table(
+         name='my_uniform_experience_replay_buffer',
+         sampler=reverb.selectors.Uniform(),
+         remover=reverb.selectors.Fifo(),
+         max_size=10**6,
+         rate_limiter=reverb.rate_limiters.MinSize(1),
+    )
+
+    reverb_server = reverb.Server([replay_table], port=8000)
     
     xmp.spawn(map_fn, args=(), nprocs=args.nprocs, start_method='fork')
 
