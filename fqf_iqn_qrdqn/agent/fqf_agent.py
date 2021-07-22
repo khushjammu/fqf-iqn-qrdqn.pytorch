@@ -99,6 +99,8 @@ class FQFAgent(BaseAgent):
         rewards = torch.FloatTensor(rewards).to(self.device)
         dones = torch.FloatTensor(dones).to(self.device)
 
+        weights = None
+
         # states, actions, rewards, next_states, dones = next(self._iter)
 
         # TODO: implement prioritised replay
