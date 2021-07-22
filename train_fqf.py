@@ -45,17 +45,6 @@ def wrapper(args):
          remover=reverb.selectors.Fifo(),
          max_size=10**6,
          rate_limiter=reverb.rate_limiters.MinSize(1),
-        #  signature={
-        #     'state': tf.TensorSpec([3, 84, 84], tf.dtypes.float32),
-        #     'action': tf.TensorSpec([1], tf.dtypes.int64),
-        #     'reward': tf.TensorSpec([1], tf.dtypes.float32),
-        #     'next_state': tf.TensorSpec([4, 84, 84], tf.dtypes.float32),
-        #     'done': tf.TensorSpec([1], tf.dtypes.float32)
-        # },
-
-        # torch.Size([32, 4, 84, 84]) torch.Size([32, 1]) torch.Size([32, 1]) torch.Size([32, 4, 84, 84]) torch.Size([32, 1])
-        #     self.memory.insert([state, action, reward, next_state, done])
-        #     torch.float32 torch.int64 torch.float32 torch.float32 torch.float32
     )
 
     reverb_server = reverb.Server([replay_table], port=8000)

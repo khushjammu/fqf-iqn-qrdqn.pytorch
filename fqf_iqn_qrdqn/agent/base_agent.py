@@ -47,30 +47,7 @@ class BaseAgent(ABC):
 
         # reverb client to sample from the reverb server
         self.memory = reverb.Client('localhost:8000')
-
-
-        # self.dataset = reverb.TrajectoryDataset.from_table_signature(
-        #   server_address='localhost:8000',
-        #   table='replay_table',
-        #   max_in_flight_samples_per_worker=10,
-        #   rate_limiter_timeout_ms=10)
-
-        # self.dataset = datasets.make_reverb_dataset(
-        #     server_address='localhost:8000',
-        #     batch_size=batch_size) # no prefetch
-
-        # self._iter = iter(self.dataset)
-
-        # TODO: implement prioritised replay
-        # if use_per:
-        #     beta_steps = (num_steps - start_steps) / update_interval
-        #     self.memory = LazyPrioritizedMultiStepMemory(
-        #         memory_size, self.env.observation_space.shape,
-        #         self.device, gamma, multi_step, beta_steps=beta_steps)
-        # else:
-        #     self.memory = LazyMultiStepMemory(
-        #         memory_size, self.env.observation_space.shape,
-        #         self.device, gamma, multi_step)
+        
 
         self.log_dir = log_dir
         self.model_dir = os.path.join(log_dir, 'model')

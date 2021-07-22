@@ -106,13 +106,11 @@ class FQFAgent(BaseAgent):
 
         weights = None
 
-        print("states shape:", states, states.shape, type(states), states.type)
-        print("next_states shape:", next_states, next_states.shape, type(next_states), next_states.type)
-        print("action shape:", actions, actions.shape, type(actions), actions.type)
-        print("reward shape:", rewards, rewards.shape, type(rewards), rewards.type)
-        print("done shape:", dones, dones.shape, type(dones), dones.type)
-
-        # states, actions, rewards, next_states, dones = next(self._iter)
+        # print("states shape:", states, states.shape, type(states), states.type)
+        # print("next_states shape:", next_states, next_states.shape, type(next_states), next_states.type)
+        # print("action shape:", actions, actions.shape, type(actions), actions.type)
+        # print("reward shape:", rewards, rewards.shape, type(rewards), rewards.type)
+        # print("done shape:", dones, dones.shape, type(dones), dones.type)
 
         # TODO: implement prioritised replay
         # if self.use_per:
