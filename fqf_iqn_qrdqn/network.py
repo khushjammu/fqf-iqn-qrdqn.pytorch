@@ -34,7 +34,7 @@ class DQNBase(nn.Module):
         4x1x128
         512
         ...
-        
+
         -----
 
         their model:
@@ -54,13 +54,13 @@ class DQNBase(nn.Module):
 
         self.net = nn.Sequential(
             Flatten(),
-            nn.LazyLinear(512),
+            nn.Linear(512, 512),
             nn.ReLU(),
-            nn.LazyLinear(1024),
+            nn.Linear(512, 1024),
             nn.ReLU(),
-            nn.LazyLinear(2048),
+            nn.Linear(1024, 2048),
             nn.ReLU(),
-            nn.LazyLinear(embedding_dim),
+            nn.Linear(2048, embedding_dim),
             nn.ReLU(),
         ).apply(initialize_weights_he)
 
