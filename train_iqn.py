@@ -33,6 +33,12 @@ def run(index, flags):
     agent.run()
 
 
+def map_fn(index, flags, *args):
+    print("flags:", flags)
+    print("extra args:", args)
+    run(index, flags)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -42,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--nprocs', type=int, default=1)
     args = parser.parse_args()
-    run(args)
+    run(index, flags)
 
     replay_table = reverb.Table(
         name='replay_table',
