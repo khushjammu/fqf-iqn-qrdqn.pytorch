@@ -23,7 +23,7 @@ def run(index, flags):
     name = flags["config"].split('/')[-1].rstrip('.yaml')
     time = datetime.now().strftime("%Y%m%d-%H%M")
     log_dir = os.path.join(
-        'logs', args.env_id, f'{name}-seed{flags["seed"]}-{time}')
+        'logs', flags["env_id"], f'{name}-seed{flags["seed"]}-{time}')
 
     # Create the agent and run.
     agent = QRDQNAgent(
