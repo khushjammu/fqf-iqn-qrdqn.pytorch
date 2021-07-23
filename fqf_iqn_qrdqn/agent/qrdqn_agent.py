@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.optim import Adam
 
@@ -60,13 +61,37 @@ class QRDQNAgent(BaseAgent):
         self.online_net.sample_noise()
         self.target_net.sample_noise()
 
-        if self.use_per:
-            (states, actions, rewards, next_states, dones), weights =\
-                self.memory.sample(self.batch_size)
-        else:
-            states, actions, rewards, next_states, dones =\
-                self.memory.sample(self.batch_size)
-            weights = None
+        # if self.use_per:
+        #     (states, actions, rewards, next_states, dones), weights =\
+        #         self.memory.sample(self.batch_size)
+        # else:
+        #     states, actions, rewards, next_states, dones =\
+        #         self.memory.sample(self.batch_size)
+        #     weights = None
+
+        samples = list(self.memory.sample('replay_table', num_samples=self.batch_size))
+
+        # stack individual samples into batch
+        states = np.stack([sample[0].data[0] for sample in samples], axis=0)
+        actions = np.stack([sample[0].data[1] for sample in samples], axis=0)
+        rewards = np.stack([sample[0].data[2] for sample in samples], axis=0)
+        next_states = np.stack([sample[0].data[3] for sample in samples], axis=0)
+        dones = np.stack([sample[0].data[4] for sample in samples], axis=0)
+
+        # convert everything for torch
+        states = torch.ByteTensor(states).to(self.device).float() / 255.
+        next_states = torch.ByteTensor(
+            next_states).to(self.device).float() / 255.
+        actions = torch.LongTensor(actions).to(self.device)
+        actions = torch.reshape(actions, (self.batch_size, 1))
+
+        rewards = torch.FloatTensor(rewards).to(self.device)
+        rewards = torch.reshape(rewards, (self.batch_size, 1))
+
+        dones = torch.FloatTensor(dones).to(self.device)
+        dones = torch.reshape(dones, (self.batch_size, 1))
+
+        weights = None
 
         quantile_loss, mean_q, errors = self.calculate_loss(
             states, actions, rewards, next_states, dones, weights)
@@ -77,10 +102,13 @@ class QRDQNAgent(BaseAgent):
             networks=[self.online_net],
             retain_graph=False, grad_cliping=self.grad_cliping)
 
-        if self.use_per:
-            self.memory.update_priority(errors)
 
-        if 4*self.steps % self.log_interval == 0:
+        # TODO: IMPLEMENT PRIORITISED REPLAY
+        # if self.use_per:
+        #     self.memory.update_priority(errors)
+
+        # self.writer should be None for non-master-ordinal cores
+        if 4*self.steps % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
                 'loss/quantile_loss', quantile_loss.detach().item(),
                 4*self.steps)
