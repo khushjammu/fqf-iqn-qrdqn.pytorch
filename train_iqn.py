@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--nprocs', type=int, default=1)
     args = parser.parse_args()
-    run(index, flags)
+    # run(index, flags)
 
     replay_table = reverb.Table(
         name='replay_table',
