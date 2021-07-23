@@ -52,6 +52,7 @@ class DQNBase(nn.Module):
         #     Flatten(),
         # ).apply(initialize_weights_he)
 
+        # TODO: don't hardcode 512, use num_channels instead
         self.net = nn.Sequential(
             Flatten(),
             nn.Linear(512, 512),

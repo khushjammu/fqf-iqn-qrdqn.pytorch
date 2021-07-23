@@ -11,7 +11,7 @@ class FQF(BaseModel):
         super(FQF, self).__init__()
 
         # Feature extractor of DQN.
-        self.dqn_net = DQNBase(num_channels=num_channels)
+        self.dqn_net = DQNBase(num_channels=num_channels, embedding_dim=embedding_dim)
         # Cosine embedding network.
         self.cosine_net = CosineEmbeddingNetwork(
             num_cosines=num_cosines, embedding_dim=embedding_dim,
@@ -19,7 +19,7 @@ class FQF(BaseModel):
         # Quantile network.
         self.quantile_net = QuantileNetwork(
             num_actions=num_actions, dueling_net=dueling_net,
-            noisy_net=noisy_net)
+            noisy_net=noisy_net, embedding_dim=embedding_dim)
 
         # Fraction proposal network.
         if not target:
