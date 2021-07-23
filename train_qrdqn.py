@@ -7,7 +7,7 @@ from datetime import datetime
 from fqf_iqn_qrdqn.env import make_pytorch_env
 from fqf_iqn_qrdqn.agent import QRDQNAgent
 
-import torch_xla.xla_multiprocessing as xmp
+import torch_xla.distributed.xla_multiprocessing as xmp
 
 # Modified for cross-core multiprocessing
 def run(index, flags):
