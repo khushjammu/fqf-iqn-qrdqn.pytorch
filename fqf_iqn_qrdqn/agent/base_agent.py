@@ -144,9 +144,9 @@ class BaseAgent(ABC):
 
     def load_models(self, save_dir):
         self.online_net.load_state_dict(torch.load(
-            os.path.join(save_dir, 'online_net.pth')).to(self.device))
+            os.path.join(save_dir, 'online_net.pth')))
         self.target_net.load_state_dict(torch.load(
-            os.path.join(save_dir, 'target_net.pth')).to(self.device))
+            os.path.join(save_dir, 'target_net.pth')))
 
     def train_episode(self):
         self.online_net.train()
