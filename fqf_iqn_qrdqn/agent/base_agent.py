@@ -135,18 +135,18 @@ class BaseAgent(ABC):
     def save_models(self, save_dir):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        torch.save(
+        xm.save(
             self.online_net.state_dict(),
             os.path.join(save_dir, 'online_net.pth'))
-        torch.save(
+        xm.save(
             self.target_net.state_dict(),
             os.path.join(save_dir, 'target_net.pth'))
 
     def load_models(self, save_dir):
         self.online_net.load_state_dict(torch.load(
-            os.path.join(save_dir, 'online_net.pth')))
+            os.path.join(save_dir, 'online_net.pth')).to(self.device))
         self.target_net.load_state_dict(torch.load(
-            os.path.join(save_dir, 'target_net.pth')))
+            os.path.join(save_dir, 'target_net.pth')).to(self.device))
 
     def train_episode(self):
         self.online_net.train()
