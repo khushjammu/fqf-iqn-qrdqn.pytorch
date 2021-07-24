@@ -30,6 +30,12 @@ def run(index, flags):
         env=env, test_env=test_env, log_dir=log_dir, seed=flags["seed"],
         cuda=flags["cuda"], **config)
     print(f"core {index} agent created, running now")
+
+    if flags["load_from_checkpoint"]:
+        PRELOAD_CHECKPOINT_DIR = os.path.join(path)
+        agent.load_models(PRELOAD_CHECKPOINT_DIR)
+        print("checkpoint loaded successfully!")
+
     agent.run()
 
 # def wrapper(args):
@@ -66,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--nprocs', type=int, default=1)
+    parser.add_argument('--load_from_checkpoint', action='store_true')
     args = parser.parse_args()
     # wrapper(args)
     # run(args)
