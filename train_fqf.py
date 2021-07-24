@@ -31,9 +31,9 @@ def run(index, flags):
         cuda=flags["cuda"], **config)
     print(f"core {index} agent created, running now")
 
-    if flags["load_from_checkpoint"]:
-        PRELOAD_CHECKPOINT_DIR = os.path.join(path)
-        agent.load_models(PRELOAD_CHECKPOINT_DIR)
+    if flags["start_from_checkpoint"]:
+        STARTING_CHECKPOINT_DIR = os.path.join("starting_checkpoint")
+        agent.load_models(STARTING_CHECKPOINT_DIR)
         print("checkpoint loaded successfully!")
 
     agent.run()
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--nprocs', type=int, default=1)
-    parser.add_argument('--load_from_checkpoint', action='store_true')
+    parser.add_argument('--start_from_checkpoint', action='store_true')
     args = parser.parse_args()
     # wrapper(args)
     # run(args)
