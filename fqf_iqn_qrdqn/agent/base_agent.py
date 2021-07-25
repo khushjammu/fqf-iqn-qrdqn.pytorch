@@ -47,7 +47,7 @@ class BaseAgent(ABC):
 
         # reverb client to sample from the reverb server
         self.memory = reverb.Client('localhost:8000')
-        
+
 
         self.log_dir = log_dir
         self.model_dir = os.path.join(log_dir, 'model')
@@ -133,14 +133,17 @@ class BaseAgent(ABC):
         pass
 
     def save_models(self, save_dir):
+        uuid = str(self.steps)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
+
+        # we need to make the filenames unique b/c xm.save doesn't overwrite by default
         xm.save(
             self.online_net.state_dict(),
-            os.path.join(save_dir, 'online_net.pth'))
+            os.path.join(save_dir, f'{uuid}-online_net.pth'))
         xm.save(
             self.target_net.state_dict(),
-            os.path.join(save_dir, 'target_net.pth'))
+            os.path.join(save_dir, f'{uuid}-target_net.pth'))
 
     def load_models(self, save_dir):
         self.online_net.load_state_dict(torch.load(
@@ -204,7 +207,7 @@ class BaseAgent(ABC):
         if self.episodes % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
                 'return/train', self.train_return.get(), 4 * self.steps)
-        
+
         # print
         xm.master_print(f'Episode: {self.episodes:<4}  '
               f'episode steps: {episode_steps:<4}  '
