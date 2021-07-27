@@ -7,6 +7,9 @@ from fqf_iqn_qrdqn.utils import calculate_quantile_huber_loss, disable_gradients
 
 from .base_agent import BaseAgent
 
+import torch_xla
+import torch_xla.core.xla_model as xm
+
 
 class BootstrapAgent(BaseAgent):
 
@@ -33,22 +36,24 @@ class BootstrapAgent(BaseAgent):
         self.online_net = EnsembleNet(
             num_channels=env.observation_space.shape[0],
             num_actions=self.num_actions, N=N, k=k,
-            num_cosines=num_cosines, dueling_net=dueling_net,
+            dueling_net=dueling_net,
             noisy_net=noisy_net).to(self.device)
 
         # Target network.
         self.target_net = EnsembleNet(
             num_channels=env.observation_space.shape[0],
             num_actions=self.num_actions, N=N, k=k,
-            num_cosines=num_cosines, dueling_net=dueling_net,
+            dueling_net=dueling_net,
             noisy_net=noisy_net).to(self.device)
 
+        self.K = k
         # Copy parameters of the learning network to the target network.
         self.update_target()
         # Disable calculations of gradients of the target network.
         disable_gradients(self.target_net)
 
         self.N = N
+        self.gamma = gamma
         self.kappa = kappa
 
         self.optim = Adam(
@@ -58,10 +63,10 @@ class BootstrapAgent(BaseAgent):
     def update_target(self):
         self.target_net.dqn_net.load_state_dict(
             self.online_net.dqn_net.state_dict())
-        self.target_net.quantile_net.load_state_dict(
-            self.online_net.quantile_net.state_dict())
-        self.target_net.cosine_net.load_state_dict(
-            self.online_net.cosine_net.state_dict())
+        [
+            self.target_net.net_list[k].load_state_dict(self.online_net.net_list[k].state_dict())
+            for k in range(self.K)
+        ]
 
     def learn(self):
         ### TODO: MASKING
@@ -90,7 +95,7 @@ class BootstrapAgent(BaseAgent):
 
         rewards = torch.FloatTensor(rewards).to(self.device)
         rewards = torch.reshape(rewards, (self.batch_size, 1))
-        
+
         dones = torch.FloatTensor(dones).to(self.device)
         dones = torch.reshape(dones, (self.batch_size, 1))
 
@@ -117,23 +122,23 @@ class BootstrapAgent(BaseAgent):
         # Calculate embeddings of current states.
         state_embeddings = self.online_net.calculate_state_embeddings(states)
 
-        all_target_next_Qs = [n.detach() for n in self.target_net.calculate_q(torch.Tensor(nexts), state_embeddings=None)]
-        all_Qs = self.online_network.calculate_q(states=torch.Tensor(inputs), state_embeddings=None)
+        all_target_next_Qs = [n.cpu().detach() for n in self.target_net.calculate_q(states=next_states, state_embeddings=None)]
+        all_Qs = self.online_net.calculate_q(states=states, state_embeddings=None)
 
         self.optim.zero_grad()
 
-        for k in range(self.k):
+        for k in range(self.K):
             next_Qs = all_target_next_Qs[k]
             next_max_Qs = next_Qs.max(1)[0]
             next_max_Qs = next_max_Qs.squeeze()
 
             # mask based on if it is end of episode or not
-            next_max_Qs = (1.0 - torch.Tensor(dones)) * next_max_Qs
-            target_Qs = torch.Tensor(np.array(rewards).astype("float32")) + self.gamma * next_max_Qs
+            next_max_Qs = (1.0 - dones) * next_max_Qs
+            target_Qs = rewards + self.gamma * next_max_Qs
 
             # get current step predictions
-            Qs = all_Qs[k]
-            Qs = Qs.gather(1, torch.LongTensor(np.array(actions)[:, None].astype("int32")))
+            Qs = all_Qs[k].cpu()
+            Qs = Qs.gather(1, torch.LongTensor(actions.cpu().numpy()[:, None].astype("int32")))
             Qs = Qs.squeeze()
 
             # BROADCASTING! NEED TO MAKE SURE DIMS MATCH
@@ -143,7 +148,7 @@ class BootstrapAgent(BaseAgent):
             loss = torch.mean(full_loss)
 
             loss.backward(retain_graph=True)
-            for param in self.online_network.parameters():
+            for param in self.online_net.parameters():
                 if param.grad is not None:
                     # Multiply grads by 1 / K
                     param.grad.data *= 1. / N_ENSEMBLE
@@ -151,7 +156,7 @@ class BootstrapAgent(BaseAgent):
             epoch_steps[k] += 1.
 
         # TODO: gradient clipping
-        # torch.nn.utils.clip_grad_value_(self.online_network.parameters(), CLIP_GRAD)
+        # torch.nn.utils.clip_grad_value_(self.online_net.parameters(), CLIP_GRAD)
 
         self.optim.step()
 
@@ -176,7 +181,7 @@ class BootstrapAgent(BaseAgent):
         #     taus, actions, weights)
 
         # quantile_loss, mean_q, errors = self.calculate_quantile_loss(
-        #     state_embeddings, tau_hats, current_sa_quantile_hats, actions,
+        #     state_embeddings, tau_hat, current_sa_quantile_hats, actions,
         #     rewards, next_states, dones, weights)
         # assert errors.shape == (self.batch_size, 1)
 
@@ -217,6 +222,15 @@ class BootstrapAgent(BaseAgent):
             #     'stats/mean_entropy_of_value_distribution',
             #     entropies.mean().detach().item(), 4*self.steps)
 
+    # overload exploit to pass k for calculate q
+    def exploit(self, state, k=None):
+        # Act without randomness.
+        state = torch.ByteTensor(
+            state).unsqueeze(0).to(self.device).float() / 255.
+        with torch.no_grad():
+            action = self.online_net.calculate_q(states=state, k=k).argmax().item()
+        return action
+
     def train_episode(self):
         self.online_net.train()
         self.target_net.train()
@@ -227,7 +241,7 @@ class BootstrapAgent(BaseAgent):
 
         done = False
         state = self.env.reset()
-        episode_k = np.random.choice(range(self.k))
+        episode_k = np.random.choice(range(self.K))
 
 
 
@@ -250,7 +264,7 @@ class BootstrapAgent(BaseAgent):
             if self.is_random(eval=False):
                 action = self.explore()
             else:
-                action = self.exploit(state, episode_k)
+                action = self.exploit(state, k=episode_k)
 
             next_state, reward, done, _ = self.env.step(action)
 
@@ -278,7 +292,7 @@ class BootstrapAgent(BaseAgent):
         if self.episodes % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
                 'return/train', self.train_return.get(), 4 * self.steps)
-        
+
         # print
         xm.master_print(f'Episode: {self.episodes:<4}  '
               f'episode steps: {episode_steps:<4}  '

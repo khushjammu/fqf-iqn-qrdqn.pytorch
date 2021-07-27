@@ -3,6 +3,17 @@ from torch import nn
 from .base_model import BaseModel
 from fqf_iqn_qrdqn.network import DQNBase, NoisyLinear
 
+class HeadNet(nn.Module):
+    def __init__(self, embedding_dim, num_actions):
+        super(HeadNet, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(embedding_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_actions), # can think about predicting distribution of Qs
+        )
+
+    def forward(self, x):
+        return self.network(x)
 
 class EnsembleNet(BaseModel):
 
@@ -15,26 +26,27 @@ class EnsembleNet(BaseModel):
         self.dqn_net = DQNBase(num_channels=num_channels)
         # Quantile network.
         if not dueling_net:
-            self.head_net = nn.Sequential(
-                linear(embedding_dim, 512),
-                nn.ReLU(),
-                linear(512, num_actions), # can think about predicting distribution of Qs
-            )
+            pass
+            # self.head_net = nn.Sequential(
+            #     linear(embedding_dim, 512),
+            #     nn.ReLU(),
+            #     linear(512, num_actions), # can think about predicting distribution of Qs
+            # )
         else:
             raise NotImplementedError()
 
-            self.advantage_net = nn.Sequential(
-                linear(embedding_dim, 512),
-                nn.ReLU(),
-                linear(512, num_actions * N),
-            )
-            self.baseline_net = nn.Sequential(
-                linear(embedding_dim, 512),
-                nn.ReLU(),
-                linear(512, N),
-            )
+            # self.advantage_net = nn.Sequential(
+            #     linear(embedding_dim, 512),
+            #     nn.ReLU(),
+            #     linear(512, num_actions * N),
+            # )
+            # self.baseline_net = nn.Sequential(
+            #     linear(embedding_dim, 512),
+            #     nn.ReLU(),
+            #     linear(512, N),
+            # )
 
-        self.net_list = nn.ModuleList([head_net() for k in range(k)])
+        self.net_list = nn.ModuleList([HeadNet(embedding_dim, num_actions) for k in range(k)])
 
         self.N = N
         self.K = k
@@ -74,14 +86,21 @@ class EnsembleNet(BaseModel):
 
         return qs
 
-    def calculate_q(self, states=None, state_embeddings=None):
+    def calculate_q(self, k=None, states=None, state_embeddings=None):
         assert states is not None or state_embeddings is not None
 
         batch_size = states.shape[0] if states is not None\
             else state_embeddings.shape[0]
 
         # Calculate quantiles.
-        q = self(states=states, state_embeddings=state_embeddings)
+        if k is not None:
+            q = self(k, states=states, state_embeddings=state_embeddings)
+        else:
+            qs = [self(i, states=states, state_embeddings=state_embeddings) for i in range(self.K)]
+            return qs
+
+
+
 
         # Calculate expectations of value distributions.
         # q = quantiles.mean(dim=1)

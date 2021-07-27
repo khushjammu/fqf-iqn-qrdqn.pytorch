@@ -5,8 +5,8 @@ from collections import deque
 import numpy as np
 import gym
 from gym import spaces, wrappers
-import cv2
-cv2.ocl.setUseOpenCL(False)
+# import cv2
+# cv2.ocl.setUseOpenCL(False)
 
 
 class NoopResetEnv(gym.Wrapper):
