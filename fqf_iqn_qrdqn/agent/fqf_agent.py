@@ -29,20 +29,21 @@ class FQFAgent(BaseAgent):
             eval_interval, num_eval_steps, max_episode_steps, grad_cliping,
             cuda, seed)
 
-        embedding_dim = 4096
+        # removing this from the FQF arguments
+        # embedding_dim = 4096
 
         # Online network.
         self.online_net = FQF(
             num_channels=env.observation_space.shape[0],
             num_actions=self.num_actions, N=N,
             num_cosines=num_cosines, dueling_net=dueling_net,
-            noisy_net=noisy_net, embedding_dim=embedding_dim).to(self.device)
+            noisy_net=noisy_net).to(self.device)
         # Target network.
         self.target_net = FQF(
             num_channels=env.observation_space.shape[0],
             num_actions=self.num_actions, N=N,
             num_cosines=num_cosines, dueling_net=dueling_net,
-            noisy_net=noisy_net, target=True, embedding_dim=embedding_dim).to(self.device)
+            noisy_net=noisy_net, target=True).to(self.device)
 
         # Copy parameters of the learning network to the target network.
         self.update_target()
@@ -102,7 +103,7 @@ class FQFAgent(BaseAgent):
 
         rewards = torch.FloatTensor(rewards).to(self.device)
         rewards = torch.reshape(rewards, (self.batch_size, 1))
-        
+
         dones = torch.FloatTensor(dones).to(self.device)
         dones = torch.reshape(dones, (self.batch_size, 1))
 

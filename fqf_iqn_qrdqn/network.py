@@ -42,28 +42,28 @@ class DQNBase(nn.Module):
         32x20x20
         '''
 
-        # self.net = nn.Sequential(
-        #     nn.Conv2d(num_channels, 32, kernel_size=8, stride=4, padding=0), # ->3 2x20x20 ((84+2*0-1*(8-1)-1)/4+1)
-        #     nn.ReLU(),
-        #     nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0), # -> 64x7x7
-        #     nn.ReLU(),
-        #     nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
-        #     nn.ReLU(),
-        #     Flatten(),
-        # ).apply(initialize_weights_he)
-
-        # TODO: don't hardcode 512, use num_channels instead
         self.net = nn.Sequential(
+            nn.Conv2d(num_channels, 32, kernel_size=8, stride=4, padding=0), # ->3 2x20x20 ((84+2*0-1*(8-1)-1)/4+1)
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0), # -> 64x7x7
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
             Flatten(),
-            nn.Linear(512, 512),
-            nn.ReLU(),
-            nn.Linear(512, 1024),
-            nn.ReLU(),
-            nn.Linear(1024, 2048),
-            nn.ReLU(),
-            nn.Linear(2048, embedding_dim),
-            nn.ReLU(),
         ).apply(initialize_weights_he)
+
+        # # TODO: don't hardcode 512, use num_channels instead
+        # self.net = nn.Sequential(
+        #     Flatten(),
+        #     nn.Linear(512, 512),
+        #     nn.ReLU(),
+        #     nn.Linear(512, 1024),
+        #     nn.ReLU(),
+        #     nn.Linear(1024, 2048),
+        #     nn.ReLU(),
+        #     nn.Linear(2048, embedding_dim),
+        #     nn.ReLU(),
+        # ).apply(initialize_weights_he)
 
         self.embedding_dim = embedding_dim
 
