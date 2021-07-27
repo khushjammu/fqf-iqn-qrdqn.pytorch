@@ -166,41 +166,17 @@ class ClipRewardEnv(gym.RewardWrapper):
         return np.sign(reward)
 
 
-# class WarpFramePyTorch(gym.ObservationWrapper):
-#     def __init__(self, env):
-#         """
-#         Warp frames to 84x84 as done in the Nature paper and later work.
-#         :param env: (Gym Environment) the environment
-#         """
-#         gym.ObservationWrapper.__init__(self, env)
-#         self.width = 84
-#         self.height = 84
-#         self.observation_space = spaces.Box(
-#             low=0, high=255, shape=(1, self.height, self.width),
-#             dtype=env.observation_space.dtype)
-
-#     def observation(self, frame):
-#         """
-#         returns the current observation from a frame
-#         :param frame: ([int] or [float]) environment frame
-#         :return: ([int] or [float]) the observation
-#         """
-#         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-#         frame = cv2.resize(
-#             frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
-#         return frame[None, :, :]
-
-class WrapFrameWithReshape(gym.ObservationWrapper):
+class WarpFramePyTorch(gym.ObservationWrapper):
     def __init__(self, env):
         """
         Warp frames to 84x84 as done in the Nature paper and later work.
         :param env: (Gym Environment) the environment
         """
         gym.ObservationWrapper.__init__(self, env)
-        # self.width = 84
-        # self.height = 84
+        self.width = 84
+        self.height = 84
         self.observation_space = spaces.Box(
-            low=0, high=255, shape=(1, 1, 128),
+            low=0, high=255, shape=(1, self.height, self.width),
             dtype=env.observation_space.dtype)
 
     def observation(self, frame):
@@ -209,9 +185,10 @@ class WrapFrameWithReshape(gym.ObservationWrapper):
         :param frame: ([int] or [float]) environment frame
         :return: ([int] or [float]) the observation
         """
-        frame = np.reshape(frame, (1, 1, 128))
-        return frame
-        # return frame[None, :, :]
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        frame = cv2.resize(
+            frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
+        return frame[None, :, :]
 
 
 class FrameStackPyTorch(gym.Wrapper):
@@ -294,12 +271,12 @@ def make_atari(env_id):
     :param env_id: (str) the environment ID
     :return: (Gym Environment) the wrapped atari environment
     """
-    env = gym.make(env_id, obs_type="ram")
+    env = gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
     return env
- 
+
 
 def wrap_deepmind_pytorch(env, episode_life=True, clip_rewards=True,
                           frame_stack=True, scale=False):
@@ -316,8 +293,7 @@ def wrap_deepmind_pytorch(env, episode_life=True, clip_rewards=True,
         env = EpisodicLifeEnv(env)
     if 'FIRE' in env.unwrapped.get_action_meanings():
         env = FireResetEnv(env)
-    # env = WarpFramePyTorch(env)
-    env = WrapFrameWithReshape(env)
+    env = WarpFramePyTorch(env)
     if clip_rewards:
         env = ClipRewardEnv(env)
     if scale:
