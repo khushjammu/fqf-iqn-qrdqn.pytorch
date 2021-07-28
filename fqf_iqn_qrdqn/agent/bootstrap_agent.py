@@ -1,3 +1,5 @@
+from collections import Counter
+
 import torch
 from torch.optim import Adam, RMSprop
 import numpy as np
@@ -100,7 +102,7 @@ class BootstrapAgent(BaseAgent):
         dones = torch.reshape(dones, (self.batch_size, 1))
 
         masks = torch.FloatTensor(masks).to(self.device)
-        masks = torch.reshape(masks, (self.batch_size, 1))
+        masks = torch.reshape(masks.squeeze(), (self.batch_size, self.K)) # in theory, should do nothing because should already be this dimension
 
         weights = None
 
@@ -122,43 +124,66 @@ class BootstrapAgent(BaseAgent):
         # Calculate embeddings of current states.
         state_embeddings = self.online_net.calculate_state_embeddings(states)
 
-        all_target_next_Qs = [n.cpu().detach() for n in self.target_net.calculate_q(states=next_states, state_embeddings=None)]
+        # n.cpu().detach()
+        all_target_next_Qs = [n.detach() for n in self.target_net.calculate_q(states=next_states, state_embeddings=None)]
         all_Qs = self.online_net.calculate_q(states=states, state_embeddings=None)
+
+        # import pdb; pdb.set_trace()
+
 
         self.optim.zero_grad()
 
         for k in range(self.K):
+            # turns out, Acme's DQN uses a similar loss function, so we in "good" company
+            # https://github.com/deepmind/trfl/blob/08ccb293edb929d6002786f1c0c177ef291f2956/trfl/action_value_ops.py
             next_Qs = all_target_next_Qs[k]
             next_max_Qs = next_Qs.max(1)[0]
             next_max_Qs = next_max_Qs.squeeze()
 
             # mask based on if it is end of episode or not
-            next_max_Qs = (1.0 - dones) * next_max_Qs
-            target_Qs = rewards + self.gamma * next_max_Qs
+            next_max_Qs = (1.0 - dones.squeeze()) * next_max_Qs
+            target_Qs = rewards.squeeze() + self.gamma * next_max_Qs
 
             # get current step predictions
-            Qs = all_Qs[k].cpu()
-            Qs = Qs.gather(1, torch.LongTensor(actions.cpu().numpy()[:, None].astype("int32")))
+            Qs = all_Qs[k] # .cpu()
+
+            # pdb.set_trace()
+
+            # actions.cpu().squeeze()
+            Qs = Qs.gather(1, torch.LongTensor(actions.cpu().squeeze().numpy()[:, None].astype("int32")).to(self.device))
             Qs = Qs.squeeze()
+
+
+
+
+            # actions.cpu().squeeze()pdb.set_trace()
+
 
             # BROADCASTING! NEED TO MAKE SURE DIMS MATCH
             # need to do updates on each head based on experience mask
             full_loss = (Qs - target_Qs) ** 2
-            full_loss = mask[:, k] * full_loss
+            full_loss = masks[:, k] * full_loss
             loss = torch.mean(full_loss)
 
-            loss.backward(retain_graph=True)
+            # the reference has this as true, which doesn't make sense to me since we only have
+            # one output of the model. guessing it's because he did .numpy() in a bunch of places
+            # time will tell...
+            loss.backward(retain_graph=False) # True
+
+            # print("backward successful")
+
             for param in self.online_net.parameters():
                 if param.grad is not None:
                     # Multiply grads by 1 / K
-                    param.grad.data *= 1. / N_ENSEMBLE
-            epoch_losses[k] += loss.detach().cpu().numpy()
-            epoch_steps[k] += 1.
+                    param.grad.data *= 1. / self.K
+            # epoch_losses[k] += loss.detach().numpy() # .cpu().numpy()
+            # epoch_steps[k] += 1.
 
         # TODO: gradient clipping
         # torch.nn.utils.clip_grad_value_(self.online_net.parameters(), CLIP_GRAD)
 
-        self.optim.step()
+        # self.optim.step()
+        xm.optimizer_step(self.optim, barrier=True)
 
         # # Calculate fractions of current states and entropies.
         # taus, tau_hats, entropies =\
@@ -202,6 +227,8 @@ class BootstrapAgent(BaseAgent):
         # if self.use_per:
             # self.memory.update_priority(errors)
 
+        # print("LEARNING WORKED!")
+
         # self.writer should be None for non-master-ordinal cores
         if self.learning_steps % self.log_interval == 0 and self.writer:
             self.writer.add_scalar(
@@ -228,7 +255,9 @@ class BootstrapAgent(BaseAgent):
         state = torch.ByteTensor(
             state).unsqueeze(0).to(self.device).float() / 255.
         with torch.no_grad():
-            action = self.online_net.calculate_q(states=state, k=k).argmax().item()
+            # import pdb; pdb.set_trace()
+            action = Counter([x.argmax().item() for x in self.online_net.calculate_q(states=state, k=k)]).most_common(1)[0][0]
+            # action = self.online_net.calculate_q(states=state, k=k).argmax().item()
         return action
 
     def train_episode(self):
@@ -268,7 +297,11 @@ class BootstrapAgent(BaseAgent):
 
             next_state, reward, done, _ = self.env.step(action)
 
-            mask = torch.poisson(torch.tensor(1.))
+            # mask = torch.poisson(torch.tensor(1.))
+
+            # we default to p=1 for the distribution as per the paper
+            # "However, in light of this empirical observation for Atari, we chose p=1 to save on minibatch passes"
+            mask = torch.bernoulli(torch.ones(self.K))
 
             # To calculate efficiently, I just set priority=max_priority here.
             # self.memory.append(state, action, reward, next_state, done)
