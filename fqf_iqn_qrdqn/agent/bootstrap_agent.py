@@ -256,8 +256,11 @@ class BootstrapAgent(BaseAgent):
             state).unsqueeze(0).to(self.device).float() / 255.
         with torch.no_grad():
             # import pdb; pdb.set_trace()
-            action = Counter([x.argmax().item() for x in self.online_net.calculate_q(states=state, k=k)]).most_common(1)[0][0]
-            # action = self.online_net.calculate_q(states=state, k=k).argmax().item()
+            if k == None:
+                # in theory, this should work for k=None and k=0...K, but let's not risk it for now
+                action = Counter([x.argmax().item() for x in self.online_net.calculate_q(states=state, k=k)]).most_common(1)[0][0]
+            else:
+                action = self.online_net.calculate_q(states=state, k=k).argmax().item()
         return action
 
     def train_episode(self):

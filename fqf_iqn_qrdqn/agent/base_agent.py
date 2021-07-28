@@ -103,6 +103,7 @@ class BaseAgent(ABC):
 
     def is_random(self, eval=False):
         # Use e-greedy for evaluation.
+        # print("RMB TO UNCOMMENT IN IS RANDOM")
         if self.steps < self.start_steps:
             return True
         if eval:
