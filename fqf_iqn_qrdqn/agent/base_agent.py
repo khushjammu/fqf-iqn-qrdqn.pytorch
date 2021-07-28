@@ -134,7 +134,7 @@ class BaseAgent(ABC):
 
     def save_models(self, save_dir):
         uuid = str(self.steps)
-        if not os.path.exists(save_dir):
+        if xm.is_master_ordinal() not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
         # we need to make the filenames unique b/c xm.save doesn't overwrite by default
