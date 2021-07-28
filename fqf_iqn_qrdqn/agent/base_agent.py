@@ -144,7 +144,6 @@ class BaseAgent(ABC):
         xm.save(
             self.target_net.state_dict(),
             os.path.join(save_dir, f'{uuid}-target_net.pth'))
-            os.path.join(save_dir, 'target_net.pth'))
 
     def load_models(self, save_dir):
         self.online_net.load_state_dict(torch.load(
