@@ -134,7 +134,7 @@ class BaseAgent(ABC):
 
     def save_models(self, save_dir):
         uuid = str(self.steps)
-        if not os.path.exists(save_dir):
+        if xm.is_master_ordinal() and not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
         # we need to make the filenames unique b/c xm.save doesn't overwrite by default
@@ -144,6 +144,7 @@ class BaseAgent(ABC):
         xm.save(
             self.target_net.state_dict(),
             os.path.join(save_dir, f'{uuid}-target_net.pth'))
+            os.path.join(save_dir, 'target_net.pth'))
 
     def load_models(self, save_dir):
         self.online_net.load_state_dict(torch.load(
